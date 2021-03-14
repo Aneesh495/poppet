@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Verify Zero Em-Dash Compliance
+        run: python3 tools/check_no_em_dash.py
+
+      - name: Check Codebase Scale
+        run: python3 tools/count_loc.py
+
+      - name: Cargo Check and Build
+        run: cargo build --release
+
+      - name: Run Rust Library Tests
+        run: cargo test --lib
+
+      - name: Run Befunge Microkernel Integration Tests
+        run: cargo test --test test_kernels
+
+      - name: Run Execution Benchmarks
+        run: cargo test --test test_benchmarks
+
+      - name: Run Qualification Gates
+        run: cargo run --release -- test
+
+      - name: Run Python Simulation Tests
+        run: python3 tests/test_simulation.py
+
+      - name: Build and Run C API Tests
+        run: |
+          gcc -Wall -Wextra tests/test_c_api.c c_api/poppet.c -o test_c_api
+          ./test_c_api
+          rm test_c_api
